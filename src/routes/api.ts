@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUser } from "../api/user.controller";
+import { getUser } from "../api/user/user.controller";
 import { GetHome } from "../api/home/home.controller";
 import { getAvailableGames } from "../api/game/game.controller";
 const router = Router();
