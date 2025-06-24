@@ -2,6 +2,7 @@
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
+const host = process.env.HOST || "localhost";
 
 const swaggerDefinition = {
   openapi: "3.0.0",
@@ -12,8 +13,8 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:3000",
-      description: "Local server",
+      url: `http://${host}:3000`,
+      description: host === "localhost" ? "Local server" : "Production server",
     },
   ],
 };
