@@ -16,6 +16,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - DB_NAME=${DB_NAME}
+      - HOST=${HOST}
     depends_on:
       db:
         condition: service_healthy
