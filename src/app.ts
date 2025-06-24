@@ -31,7 +31,14 @@ app.use("/api", apiRoutes);
 app.use(helmet());
 
 // Enable CORS
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: "*", 
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Gzip compression
 app.use(compression());
