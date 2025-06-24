@@ -13,7 +13,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://${host}:3000`,
+      url: `http://185.209.229.198:3000`,
       description: host === "localhost" ? "Local server" : "Production server",
     },
   ],
