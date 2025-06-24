@@ -6,6 +6,9 @@ const router = Router();
 
 // Define all routes here (like PHP api.php)
 
+app.get("/", (_req: Request, res: Response) => {
+  res.redirect("/docs");
+});
 
 /**
  * @openapi
