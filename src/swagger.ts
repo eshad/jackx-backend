@@ -28,5 +28,5 @@ const swaggerSpec = swaggerJSDoc(options);
 
 export const setupSwagger = (app: Express) => {
   console.log("Loaded Swagger paths:", Object.keys(swaggerSpec.paths)); 
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec)); 
+  app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec)); 
 };
