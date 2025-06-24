@@ -6,7 +6,7 @@ services:
     container_name: casino_api
     restart: unless-stopped
     ports:
-      - "8080:3000"
+      - "3000:3000"
     volumes:
       - .:/app
       - /app/node_modules
@@ -16,7 +16,6 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - DB_NAME=${DB_NAME}
-      - HOST=${HOST}
     depends_on:
       db:
         condition: service_healthy
