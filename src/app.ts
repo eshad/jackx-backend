@@ -33,7 +33,7 @@ app.use(helmet());
 // Enable CORS
 app.use(
   cors({
-    origin: "https://backend.jackpotx.net",
+    origin: "http://backend.jackpotx.net",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

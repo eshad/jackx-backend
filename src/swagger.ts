@@ -13,7 +13,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://185.209.229.198:3000`,
+      url: 'https://backend.jackpotx.net',
       description: "Production server",
     },
   ],
