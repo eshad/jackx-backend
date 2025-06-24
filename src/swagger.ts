@@ -13,7 +13,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://185.209.229.198:3000`,
+      url: `http://185.209.229.198:8080`,
       description: "Production server",
     },
   ],
