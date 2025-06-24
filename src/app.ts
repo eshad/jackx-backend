@@ -31,14 +31,8 @@ app.use("/api", apiRoutes);
 app.use(helmet());
 
 // Enable CORS
-app.use(
-  cors({
-    origin: "http://backend.jackpotx.net",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+app.use(cors());
+
 // Gzip compression
 app.use(compression());
 
