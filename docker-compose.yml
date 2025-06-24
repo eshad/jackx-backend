@@ -6,7 +6,7 @@ services:
     container_name: casino_api
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "8080:3000"
     volumes:
       - .:/app
       - /app/node_modules
