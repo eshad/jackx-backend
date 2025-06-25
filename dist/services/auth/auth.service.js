@@ -7,8 +7,8 @@ exports.registerService = exports.loginService = void 0;
 const postgres_1 = __importDefault(require("../../db/postgres"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const messages_1 = require("../../constants/messages");
-const auth_query_1 = require("./auth.query");
-const jwt_service_1 = require("../../services/jwt/jwt.service");
+const auth_query_1 = require("../../api/auth/auth.query");
+const jwt_service_1 = require("../jwt/jwt.service");
 const apiError_1 = require("../../utils/apiError");
 const jwtService = new jwt_service_1.JwtService();
 const loginService = async (reqBody) => {

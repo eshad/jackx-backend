@@ -1,10 +1,13 @@
-import express from "express";
-import { login, register } from "../api/auth/auth.controller";
-import { LoginSchema, RegisterSchema } from "../api/auth/auth.schema";
-import { validate } from "../middlewares/validate";
-
-const router = express.Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const auth_controller_1 = require("../api/auth/auth.controller");
+const auth_schema_1 = require("../api/auth/auth.schema");
+const validate_1 = require("../middlewares/validate");
+const router = express_1.default.Router();
 /**
  * @openapi
  * /api/auth/login:
@@ -22,12 +25,12 @@ const router = express.Router();
  *               - email
  *               - password
  *             properties:
- *               username:
+ *               email:
  *                 type: string
- *                 example: user01
+ *                 example: user@example.com
  *               password:
  *                 type: string
- *                 example: qwer1234
+ *                 example: Pass1234
  *     responses:
  *       200:
  *         description: Login success
@@ -48,8 +51,7 @@ const router = express.Router();
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", validate({ body: LoginSchema }), login);
-
+router.post("/login", (0, validate_1.validate)({ body: auth_schema_1.LoginSchema }), auth_controller_1.login);
 /**
  * @openapi
  * /api/auth/register:
@@ -67,15 +69,12 @@ router.post("/login", validate({ body: LoginSchema }), login);
  *               - email
  *               - password
  *             properties:
- *               username:
- *                 type: string
- *                 example: user01
  *               email:
  *                 type: string
- *                 example: user@live.com
+ *                 example: newuser@example.com
  *               password:
  *                 type: string
- *                 example: qwer1234
+ *                 example: StrongPassword123!
  *     responses:
  *       200:
  *         description: User registered successfully
@@ -93,6 +92,5 @@ router.post("/login", validate({ body: LoginSchema }), login);
  *       400:
  *         description: Validation failed
  */
-router.post("/register", validate({ body: RegisterSchema }), register);
-
-export default router;
+router.post("/register", (0, validate_1.validate)({ body: auth_schema_1.RegisterSchema }), auth_controller_1.register);
+exports.default = router;

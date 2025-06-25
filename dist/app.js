@@ -12,8 +12,9 @@ const path_1 = __importDefault(require("path"));
 const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const api_1 = __importDefault(require("./routes/api"));
 // Routes
-const auth_routes_1 = __importDefault(require("./api/auth/auth.routes"));
+const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 // import userRoutes from "./api/user/user.routes";
 // Middleware
 const errorHandler_1 = __importDefault(require("./middlewares/errorHandler"));
@@ -23,10 +24,17 @@ const app = (0, express_1.default)();
     await (0, mongo_1.connectMongo)();
 })();
 app.set("trust proxy", 1);
+// All your actual API routes
+app.use("/api", api_1.default);
 // Security headers
 app.use((0, helmet_1.default)());
 // Enable CORS
-app.use((0, cors_1.default)());
+// app.use(cors());
+app.use((0, cors_1.default)({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+}));
 // Gzip compression
 app.use((0, compression_1.default)());
 // Parse JSON and URL-encoded payloads
@@ -51,7 +59,7 @@ else {
     app.use((0, morgan_1.default)("dev"));
 }
 // Routes
-app.get('/', (_req, res) => {
+app.get('/health', (_req, res) => {
     res.json({ message: 'OK' });
 });
 app.use("/api/auth", auth_routes_1.default);
