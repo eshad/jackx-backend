@@ -1,5 +1,5 @@
 import express from "express";
-import { login, register } from "../api/auth/auth.controller";
+import { login, register, refreshToken } from "../api/auth/auth.controller";
 import { LoginSchema, RegisterSchema } from "../api/auth/auth.schema";
 import { validate } from "../middlewares/validate";
 
@@ -94,5 +94,44 @@ router.post("/login", validate({ body: LoginSchema }), login);
  *         description: Validation failed
  */
 router.post("/register", validate({ body: RegisterSchema }), register);
+
+/**
+ * @openapi
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh JWT tokens
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 example: your_refresh_token_here
+ *     responses:
+ *       200:
+ *         description: New tokens generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                     refresh_token:
+ *                       type: string
+ */
+router.post("/refresh", refreshToken);
 
 export default router;

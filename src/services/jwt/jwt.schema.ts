@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
 export const TokenPayloadSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),            
   username: z.string(),
-  // Optional fields if needed
   role: z.string().optional(),
   iat: z.number().optional(),
   exp: z.number().optional(),

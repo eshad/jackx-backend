@@ -22,8 +22,22 @@ export const RegisterSchema = z.object({
   password: z
     .string()
     .min(8, ErrorMessages.INVALID_PASSWORD),
-})
+});
+
+// ============================
+// Type Definitions
+// ============================
 
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type AuthHeaderInput = z.infer<typeof AuthHeaderSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+
+export type LoginResponse = {
+  access_token: string;
+  refresh_token: string;
+  role: {
+    id: number;
+    name: string;
+    description: string | null;
+  };
+};

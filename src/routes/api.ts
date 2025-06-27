@@ -1,7 +1,9 @@
 import { Router } from "express";
-import { getUser } from "../api/user/user.controller";
+import { getUserBalance } from "../api/user/user.controller";
 import { GetHome } from "../api/home/home.controller";
 import { getAvailableGames } from "../api/game/game.controller";
+import { authenticate } from "../middlewares/authenticate";
+import { authorize } from "../middlewares/authorize";
 const router = Router();
 
 // Define all routes here (like PHP api.php)
@@ -9,24 +11,55 @@ const router = Router();
 
 /**
  * @openapi
- * /api/user:
+ * /api/user/balance:
  *   get:
- *     summary: Returns User Data
+ *     summary: Get user info and balance
  *     tags:
  *       - User
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: A successful hello response
+ *         description: Successfully returns user info with balance
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     username:
+ *                       type: string
+ *                       example: johndoe
+ *                     email:
+ *                       type: string
+ *                       example: johndoe@example.com
+ *                     balance:
+ *                       type: number
+ *                       format: float
+ *                       example: 100.50
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
  *                 message:
  *                   type: string
- *                   example: Hello, World!
+ *                   example: Unauthorized
  */
-router.get("/user", getUser);
+router.get("/user/balance", authenticate, getUserBalance);
 
 /**
  * @openapi

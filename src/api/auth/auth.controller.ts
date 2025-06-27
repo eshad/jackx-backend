@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { loginService, registerService } from "../../services/auth/auth.service";
+import { loginService, registerService, refreshToken as refreshTokenService } from "../../services/auth/auth.service";
 import { LoginInput, RegisterInput } from "./auth.schema";
 import { SuccessMessages } from "../../constants/messages";
 
@@ -30,3 +30,6 @@ export const register = async (
     next(err);
   }
 };
+
+// ✅ This was missing
+export const refreshToken = refreshTokenService;

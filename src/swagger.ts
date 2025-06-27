@@ -2,7 +2,6 @@ import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
 
-// No `servers` here, since we will override with `swaggerOptions.urls`
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
@@ -10,6 +9,20 @@ const swaggerDefinition = {
     version: "1.0.0",
     description: "API documentation for JackpotX backend",
   },
+  components: {
+    securitySchemes: {
+      BearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
+  },
+  security: [
+    {
+      BearerAuth: [],
+    },
+  ],
 };
 
 export const options: any = {
@@ -22,15 +35,14 @@ const swaggerSpec = swaggerJSDoc(options);
 export const setupSwagger = (app: Express) => {
   console.log("Loaded Swagger paths:", Object.keys(swaggerSpec.paths));
 
-  // Serve JSON schema for Swagger UI dropdown
   app.get("/api-docs.json", (_req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });
 
-  // Serve Swagger UI on a proper path (not "/")
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(undefined, {
     swaggerOptions: {
+      persistAuthorization: true,
       urls: [
         {
           url: "https://backend.jackpotx.net/api-docs.json",
@@ -46,6 +58,7 @@ export const setupSwagger = (app: Express) => {
       validatorUrl: null,
     },
   }));
+
   app.get("/", (_req, res) => {
     res.redirect("/docs");
   });

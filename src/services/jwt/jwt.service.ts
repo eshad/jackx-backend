@@ -31,7 +31,8 @@ export class JwtService {
     const refreshTokenOptions: SignOptions = {
       expiresIn: this.refreshTokenExpiresIn as jwt.SignOptions['expiresIn'],
       ...options,
-    }
+    };
+    console.log("[JWT] Signing refresh token with secret:", this.refreshSecret);
     return jwt.sign(payload, this.refreshSecret, refreshTokenOptions);
   }
 
@@ -52,9 +53,12 @@ export class JwtService {
 
   verifyRefreshToken(token: string, options: VerifyOptions = {}): TokenPayload {
     try {
+      console.log("[JWT] Verifying refresh token with secret:", this.refreshSecret);
       const decoded = jwt.verify(token, this.refreshSecret, options);
+      console.log("[JWT] Decoded refresh token:", decoded);
       return TokenPayloadSchema.parse(decoded); // runtime validation
     } catch (err: any) {
+      console.error("[JWT] Refresh token verification error:", err.message);
       if (err.name === 'TokenExpiredError') {
         throw new ApiError(ErrorMessages.EXPIRED_REFRESH_TOKEN, 401);
       }
