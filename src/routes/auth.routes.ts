@@ -24,7 +24,7 @@ const router = express.Router();
  *             properties:
  *               username:
  *                 type: string
- *                 example: user01
+ *                 example: player1
  *               password:
  *                 type: string
  *                 example: qwer1234

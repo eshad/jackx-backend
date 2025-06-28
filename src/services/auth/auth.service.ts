@@ -18,10 +18,12 @@ export const loginService = async (
     const result = await pool.query(
       `
       SELECT 
-        u.id, u.username, u.password, u.role_id, r.name AS role_name, r.description AS role_description
+        u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
       FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN user_roles ur ON u.id = ur.user_id
+      LEFT JOIN roles r ON ur.role_id = r.id
       WHERE u.username = $1
+      LIMIT 1
       `,
       [username]
     );
@@ -72,24 +74,75 @@ export const registerService = async (
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const result = await pool.query(
-      Query.REGISTER_USER,
-      [username, email, hashedPassword]
-    );
+    // Start transaction
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
 
-    if (result.rows.length === 0) {
-      throw new ApiError('User creation failed', 500);
+      // Create user
+      const userResult = await client.query(
+        Query.REGISTER_USER,
+        [username, email, hashedPassword]
+      );
+
+      if (userResult.rows.length === 0) {
+        throw new ApiError('User creation failed', 500);
+      }
+
+      const userId = userResult.rows[0].id;
+
+      // Assign default Player role
+      const playerRoleResult = await client.query(
+        "SELECT id FROM roles WHERE name = 'Player'"
+      );
+
+      if (playerRoleResult.rows.length === 0) {
+        throw new ApiError('Default role not found', 500);
+      }
+
+      const playerRoleId = playerRoleResult.rows[0].id;
+
+      await client.query(
+        "INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)",
+        [userId, playerRoleId]
+      );
+
+      // Create initial balance for the new user
+      await client.query(
+        "INSERT INTO user_balances (user_id, balance) VALUES ($1, $2)",
+        [userId, 0.00]
+      );
+
+      // Create user profile
+      await client.query(
+        "INSERT INTO user_profiles (user_id) VALUES ($1)",
+        [userId]
+      );
+
+      // Assign Bronze level
+      const bronzeLevelResult = await client.query(
+        "SELECT id FROM user_levels WHERE name = 'Bronze'"
+      );
+
+      if (bronzeLevelResult.rows.length > 0) {
+        const bronzeLevelId = bronzeLevelResult.rows[0].id;
+        await client.query(
+          "INSERT INTO user_level_progress (user_id, level_id, current_points, total_points_earned) VALUES ($1, $2, $3, $4)",
+          [userId, bronzeLevelId, 0, 0]
+        );
+      }
+
+      await client.query('COMMIT');
+      return SuccessMessages.REGISTER_SUCCESS;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
 
-    const userId = result.rows[0].id;
-
-    // Create initial balance for the new user
-    await pool.query(
-      "INSERT INTO user_balances (user_id, balance) VALUES ($1, $2)",
-      [userId, 0.00]
-    );
-
-    return SuccessMessages.REGISTER_SUCCESS;
   } catch (err) {
     console.error(`[Register Error] ${err instanceof Error ? err.message : err}`);
     throw err;
