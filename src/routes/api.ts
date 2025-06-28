@@ -34,6 +34,7 @@ import {
   ToggleGameFavoriteSchema,
   GameFiltersSchema
 } from "../api/game/game.schema";
+import adminRoutes from "./admin.routes";
 const router = Router();
 
 // Define all routes here (like PHP api.php)
@@ -265,102 +266,151 @@ router.get("/user/balance", authenticate, getUserBalance);
  * @openapi
  * /api/home:
  *   get:
- *     summary: Returns Home Data
+ *     summary: Get comprehensive home dashboard data
  *     tags:
  *       - Home
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: A successful hello response
+ *         description: Successfully returns home dashboard data
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Hello, World!
+ *                   example: Home data retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     featured_games:
+ *                       type: array
+ *                       description: Featured games for the homepage
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           provider:
+ *                             type: string
+ *                           thumbnail_url:
+ *                             type: string
+ *                           is_featured:
+ *                             type: boolean
+ *                     new_games:
+ *                       type: array
+ *                       description: Newly added games
+ *                       items:
+ *                         type: object
+ *                     hot_games:
+ *                       type: array
+ *                       description: Currently trending games
+ *                       items:
+ *                         type: object
+ *                     popular_games:
+ *                       type: array
+ *                       description: Most played games
+ *                       items:
+ *                         type: object
+ *                     user_stats:
+ *                       type: object
+ *                       description: User statistics (if authenticated)
+ *                       properties:
+ *                         total_balance:
+ *                           type: number
+ *                           format: float
+ *                         total_bets:
+ *                           type: integer
+ *                         total_wins:
+ *                           type: number
+ *                           format: float
+ *                         favorite_games_count:
+ *                           type: integer
+ *                         level_name:
+ *                           type: string
+ *                         level_progress:
+ *                           type: number
+ *                           format: float
+ *                     recent_activity:
+ *                       type: array
+ *                       description: User's recent activity (if authenticated)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                           game_name:
+ *                             type: string
+ *                           bet_amount:
+ *                             type: number
+ *                           outcome:
+ *                             type: string
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     promotions:
+ *                       type: array
+ *                       description: Active promotions
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           title:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           promo_type:
+ *                             type: string
+ *                           bonus_amount:
+ *                             type: number
+ *                           start_date:
+ *                             type: string
+ *                             format: date-time
+ *                           end_date:
+ *                             type: string
+ *                             format: date-time
+ *                     announcements:
+ *                       type: array
+ *                       description: System announcements
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           title:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           announcement_type:
+ *                             type: string
+ *                           priority:
+ *                             type: integer
+ *                     quick_stats:
+ *                       type: object
+ *                       description: Platform statistics
+ *                       properties:
+ *                         total_games:
+ *                           type: integer
+ *                         total_categories:
+ *                           type: integer
+ *                         total_providers:
+ *                           type: integer
+ *                         active_players:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized (optional - endpoint works without auth but with limited data)
  */
 router.get("/home", GetHome);
-
-/**
- * @openapi
- * /api/games:
- *   get:
- *     summary: Get all available games with filtering
- *     tags:
- *       - Game
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Filter by game category
- *       - in: query
- *         name: provider
- *         schema:
- *           type: string
- *         description: Filter by game provider
- *       - in: query
- *         name: is_featured
- *         schema:
- *           type: boolean
- *         description: Filter featured games
- *       - in: query
- *         name: is_new
- *         schema:
- *           type: boolean
- *         description: Filter new games
- *       - in: query
- *         name: is_hot
- *         schema:
- *           type: boolean
- *         description: Filter hot games
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search games by name or provider
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 50
- *         description: Number of games to return
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           default: 0
- *         description: Number of games to skip
- *     responses:
- *       200:
- *         description: Successfully returns filtered games
- *       400:
- *         description: Invalid filter parameters
- */
-router.get("/games", validate({ query: GameFiltersSchema }), getAvailableGames);
-
-/**
- * @openapi
- * /api/games/{id}:
- *   get:
- *     summary: Get game by ID
- *     tags:
- *       - Game
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Game ID
- *     responses:
- *       200:
- *         description: Successfully returns game details
- *       404:
- *         description: Game not found
- */
-router.get("/games/:id", getGameById);
 
 /**
  * @openapi
@@ -467,6 +517,86 @@ router.get("/games/hot", getHotGames);
  *         description: Successfully returns popular games
  */
 router.get("/games/popular", getPopularGames);
+
+/**
+ * @openapi
+ * /api/games/{id}:
+ *   get:
+ *     summary: Get game by ID
+ *     tags:
+ *       - Game
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Game ID
+ *     responses:
+ *       200:
+ *         description: Successfully returns game details
+ *       404:
+ *         description: Game not found
+ */
+router.get("/games/:id", getGameById);
+
+/**
+ * @openapi
+ * /api/games:
+ *   get:
+ *     summary: Get all available games with filtering
+ *     tags:
+ *       - Game
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by game category
+ *       - in: query
+ *         name: provider
+ *         schema:
+ *           type: string
+ *         description: Filter by game provider
+ *       - in: query
+ *         name: is_featured
+ *         schema:
+ *           type: boolean
+ *         description: Filter featured games
+ *       - in: query
+ *         name: is_new
+ *         schema:
+ *           type: boolean
+ *         description: Filter new games
+ *       - in: query
+ *         name: is_hot
+ *         schema:
+ *           type: boolean
+ *         description: Filter hot games
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search games by name or provider
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of games to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of games to skip
+ *     responses:
+ *       200:
+ *         description: Successfully returns filtered games
+ *       400:
+ *         description: Invalid filter parameters
+ */
+router.get("/games", validate({ query: GameFiltersSchema }), getAvailableGames);
 
 /**
  * @openapi
@@ -674,5 +804,7 @@ router.get("/game/available", getAvailableGamesLegacy);
 // Add more routes:
   // router.post("/login", login)
   // router.get("/wallet/balance", checkWallet)
+
+router.use("/admin", adminRoutes);
 
 export default router;

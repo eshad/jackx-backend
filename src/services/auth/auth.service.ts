@@ -13,53 +13,103 @@ export const loginService = async (
   reqBody: LoginInput
 ): Promise<LoginResponse> => {
   try {
-    const { username, password } = reqBody;
+    const { username, password, role_id } = reqBody;
 
-    const result = await pool.query(
-      `
-      SELECT 
-        u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
-      FROM users u
-      LEFT JOIN user_roles ur ON u.id = ur.user_id
-      LEFT JOIN roles r ON ur.role_id = r.id
-      WHERE u.username = $1
-      LIMIT 1
-      `,
-      [username]
-    );
+    // If role_id is provided, login with specific role
+    if (role_id) {
+      const result = await pool.query(
+        `
+        SELECT 
+          u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
+        FROM users u
+        INNER JOIN user_roles ur ON u.id = ur.user_id
+        INNER JOIN roles r ON ur.role_id = r.id
+        WHERE u.username = $1 AND r.id = $2
+        LIMIT 1
+        `,
+        [username, role_id]
+      );
 
-    if (result.rows.length === 0) {
-      throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-    }
+      if (result.rows.length === 0) {
+        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
+      }
 
-    const user = result.rows[0];
+      const user = result.rows[0];
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-    }
+      // Compare password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
+      }
 
-    // Sign JWT with user ID and role name
-    const payload = {
-      userId: user.id,
-      username: user.username,
-      role: user.role_name,
-    };
-
-    const accessToken = jwtService.signAccessToken(payload);
-    const refreshToken = jwtService.signRefreshToken(payload);
-
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      role: {
-        id: user.role_id,
+      // Sign JWT with user ID and role name
+      const payload = {
+        userId: user.id,
         username: user.username,
-        name: user.role_name,
-        description: user.role_description,
-      },
-    };
+        role: user.role_name,
+      };
+
+      const accessToken = jwtService.signAccessToken(payload);
+      const refreshToken = jwtService.signRefreshToken(payload);
+
+      return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        role: {
+          id: user.role_id,
+          username: user.username,
+          name: user.role_name,
+          description: user.role_description,
+        },
+      };
+    } else {
+      // If no role_id provided, login with default Player role
+      const result = await pool.query(
+        `
+        SELECT 
+          u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
+        FROM users u
+        INNER JOIN user_roles ur ON u.id = ur.user_id
+        INNER JOIN roles r ON ur.role_id = r.id
+        WHERE u.username = $1 AND r.name = 'Player'
+        LIMIT 1
+        `,
+        [username]
+      );
+
+      if (result.rows.length === 0) {
+        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
+      }
+
+      const user = result.rows[0];
+
+      // Compare password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
+      }
+
+      // Sign JWT with user ID and role name
+      const payload = {
+        userId: user.id,
+        username: user.username,
+        role: user.role_name,
+      };
+
+      const accessToken = jwtService.signAccessToken(payload);
+      const refreshToken = jwtService.signRefreshToken(payload);
+
+      return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        role: {
+          id: user.role_id,
+          username: user.username,
+          name: user.role_name,
+          description: user.role_description,
+        },
+      };
+    }
   } catch (err) {
     console.error(`[Login Error] ${err instanceof Error ? err.message : err}`);
     throw err;
@@ -82,13 +132,13 @@ export const registerService = async (
 
       // Create user
       const userResult = await client.query(
-        Query.REGISTER_USER,
-        [username, email, hashedPassword]
-      );
+      Query.REGISTER_USER,
+      [username, email, hashedPassword]
+    );
 
       if (userResult.rows.length === 0) {
-        throw new ApiError('User creation failed', 500);
-      }
+      throw new ApiError('User creation failed', 500);
+    }
 
       const userId = userResult.rows[0].id;
 
@@ -108,11 +158,11 @@ export const registerService = async (
         [userId, playerRoleId]
       );
 
-      // Create initial balance for the new user
+    // Create initial balance for the new user
       await client.query(
-        "INSERT INTO user_balances (user_id, balance) VALUES ($1, $2)",
-        [userId, 0.00]
-      );
+      "INSERT INTO user_balances (user_id, balance) VALUES ($1, $2)",
+      [userId, 0.00]
+    );
 
       // Create user profile
       await client.query(
@@ -134,7 +184,7 @@ export const registerService = async (
       }
 
       await client.query('COMMIT');
-      return SuccessMessages.REGISTER_SUCCESS;
+    return SuccessMessages.REGISTER_SUCCESS;
 
     } catch (error) {
       await client.query('ROLLBACK');
@@ -145,6 +195,28 @@ export const registerService = async (
 
   } catch (err) {
     console.error(`[Register Error] ${err instanceof Error ? err.message : err}`);
+    throw err;
+  }
+};
+
+export const getUserRolesService = async (username: string) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        r.id, r.name, r.description
+      FROM users u
+      INNER JOIN user_roles ur ON u.id = ur.user_id
+      INNER JOIN roles r ON ur.role_id = r.id
+      WHERE u.username = $1
+      ORDER BY r.name
+      `,
+      [username]
+    );
+
+    return result.rows;
+  } catch (err) {
+    console.error(`[Get User Roles Error] ${err instanceof Error ? err.message : err}`);
     throw err;
   }
 };

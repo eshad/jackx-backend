@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { loginService, registerService, refreshToken as refreshTokenService } from "../../services/auth/auth.service";
+import { loginService, registerService, refreshToken as refreshTokenService, getUserRolesService } from "../../services/auth/auth.service";
 import { LoginInput, RegisterInput } from "./auth.schema";
 import { SuccessMessages } from "../../constants/messages";
 
@@ -33,3 +33,23 @@ export const register = async (
 
 // ✅ This was missing
 export const refreshToken = refreshTokenService;
+
+export const getUserRoles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { username } = req.query;
+    
+    if (!username || typeof username !== 'string') {
+      res.status(400).json({ success: false, message: "Username is required" });
+      return;
+    }
+
+    const roles = await getUserRolesService(username);
+    res.json({ success: true, data: roles });
+  } catch (err) {
+    next(err);
+  }
+};

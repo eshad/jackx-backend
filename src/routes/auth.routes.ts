@@ -1,5 +1,5 @@
 import express from "express";
-import { login, register, refreshToken } from "../api/auth/auth.controller";
+import { login, register, refreshToken, getUserRoles } from "../api/auth/auth.controller";
 import { LoginSchema, RegisterSchema } from "../api/auth/auth.schema";
 import { validate } from "../middlewares/validate";
 
@@ -9,7 +9,7 @@ const router = express.Router();
  * @openapi
  * /api/auth/login:
  *   post:
- *     summary: Login with email and password
+ *     summary: Login with username and password
  *     tags:
  *       - Auth
  *     requestBody:
@@ -19,7 +19,7 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - username
  *               - password
  *             properties:
  *               username:
@@ -28,6 +28,11 @@ const router = express.Router();
  *               password:
  *                 type: string
  *                 example: qwer1234
+ *               role_id:
+ *                 type: number
+ *                 optional: true
+ *                 description: Optional role ID to login with specific role. If not provided, defaults to Player role.
+ *                 example: 2
  *     responses:
  *       200:
  *         description: Login success
@@ -43,8 +48,29 @@ const router = express.Router();
  *                   type: string
  *                   example: Logged in successfully
  *                 token:
- *                   type: string
- *                   example: eyJhbGciOi...
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                       example: eyJhbGciOi...
+ *                     refresh_token:
+ *                       type: string
+ *                       example: eyJhbGciOi...
+ *                     role:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: number
+ *                           example: 1
+ *                         username:
+ *                           type: string
+ *                           example: player1
+ *                         name:
+ *                           type: string
+ *                           example: Player
+ *                         description:
+ *                           type: string
+ *                           example: Regular player account
  *       401:
  *         description: Invalid credentials
  */
@@ -133,5 +159,52 @@ router.post("/register", validate({ body: RegisterSchema }), register);
  *                       type: string
  */
 router.post("/refresh", refreshToken);
+
+/**
+ * @openapi
+ * /api/auth/user-roles:
+ *   get:
+ *     summary: Get available roles for a user
+ *     tags:
+ *       - Auth
+ *     parameters:
+ *       - in: query
+ *         name: username
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Username to get roles for
+ *         example: player1
+ *     responses:
+ *       200:
+ *         description: User roles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: number
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: Player
+ *                       description:
+ *                         type: string
+ *                         example: Regular player account
+ *       400:
+ *         description: Username is required
+ *       401:
+ *         description: User not found
+ */
+router.get("/user-roles", getUserRoles);
 
 export default router;

@@ -8,6 +8,10 @@ export const LoginSchema = z.object({
   password: z
     .string()
     .min(6, ErrorMessages.INVALID_CREDENTIALS),
+  role_id: z
+    .number()
+    .optional()
+    .describe("Optional role ID to login with specific role. If not provided, defaults to Player role."),
 });
 
 export const AuthHeaderSchema = z.object({
