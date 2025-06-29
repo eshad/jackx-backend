@@ -10,6 +10,10 @@ exports.LoginSchema = zod_1.z.object({
     password: zod_1.z
         .string()
         .min(6, messages_1.ErrorMessages.INVALID_CREDENTIALS),
+    role_id: zod_1.z
+        .number()
+        .optional()
+        .describe("Optional role ID to login with specific role. If not provided, defaults to Player role."),
 });
 exports.AuthHeaderSchema = zod_1.z.object({
     authorization: zod_1.z.string().startsWith("Bearer "),

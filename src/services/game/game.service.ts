@@ -1,5 +1,6 @@
 import pool from "../../db/postgres";
 import { ApiError } from "../../utils/apiError";
+import { playGame } from "../api/game/game.controller";
 
 // Get all available games with filtering
 export const getAvailableGamesService = async (filters: {
@@ -590,4 +591,22 @@ export const getPopularGamesService = async (limit: number = 10) => {
   );
 
   return result.rows;
+};
+
+// Get play URL and related info from provider (stub implementation)
+export const getGamePlayInfoService = async (gameId: number, userId: number) => {
+  // 1. Fetch game info
+  const game = await getGameByIdService(gameId);
+
+  // 2. Here you would call the provider's API to get a play URL/token
+  // For now, we'll mock this
+  const playUrl = `https://provider.example.com/launch?game_code=${game.game_code}&user_id=${userId}`;
+
+  // 3. Return all relevant info
+  return {
+    play_url: playUrl,
+    game: {
+      ...game
+    }
+  };
 }; 

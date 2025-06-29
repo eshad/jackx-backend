@@ -1,4 +1,4 @@
-import { pool } from "../../db/postgres";
+import pool from "../../db/postgres";
 import { getAvailableGamesService } from "../game/game.service";
 
 export interface HomeData {
@@ -66,27 +66,27 @@ export const getHomeDataService = async (userId?: number): Promise<HomeData> => 
 
 const getQuickStats = async () => {
   try {
-    const [gamesResult] = await pool.execute(
-      "SELECT COUNT(*) as total_games FROM games WHERE is_active = 1"
+    const gamesResult = await pool.query(
+      "SELECT COUNT(*) as total_games FROM games WHERE is_active = true"
     );
     
-    const [categoriesResult] = await pool.execute(
-      "SELECT COUNT(DISTINCT category) as total_categories FROM games WHERE is_active = 1"
+    const categoriesResult = await pool.query(
+      "SELECT COUNT(DISTINCT category) as total_categories FROM games WHERE is_active = true"
     );
     
-    const [providersResult] = await pool.execute(
-      "SELECT COUNT(DISTINCT provider) as total_providers FROM games WHERE is_active = 1"
+    const providersResult = await pool.query(
+      "SELECT COUNT(DISTINCT provider) as total_providers FROM games WHERE is_active = true"
     );
     
-    const [activePlayersResult] = await pool.execute(
-      "SELECT COUNT(*) as active_players FROM user_sessions WHERE last_activity > DATE_SUB(NOW(), INTERVAL 24 HOUR)"
+    const activePlayersResult = await pool.query(
+      "SELECT COUNT(*) as active_players FROM users u JOIN statuses s ON u.status_id = s.id WHERE s.name = 'Active'"
     );
 
     return {
-      total_games: (gamesResult as any)[0]?.total_games || 0,
-      total_categories: (categoriesResult as any)[0]?.total_categories || 0,
-      total_providers: (providersResult as any)[0]?.total_providers || 0,
-      active_players: (activePlayersResult as any)[0]?.active_players || 0,
+      total_games: gamesResult.rows[0]?.total_games || 0,
+      total_categories: categoriesResult.rows[0]?.total_categories || 0,
+      total_providers: providersResult.rows[0]?.total_providers || 0,
+      active_players: activePlayersResult.rows[0]?.active_players || 0,
     };
   } catch (error) {
     console.error("Error fetching quick stats:", error);
@@ -101,42 +101,39 @@ const getQuickStats = async () => {
 
 const getUserStats = async (userId: number) => {
   try {
-    const [balanceResult] = await pool.execute(
-      "SELECT balance FROM user_balances WHERE user_id = ?",
+    const balanceResult = await pool.query(
+      "SELECT balance, bonus_balance, locked_balance FROM user_balances WHERE user_id = $1",
       [userId]
     );
     
-    const [betsResult] = await pool.execute(
-      "SELECT COUNT(*) as total_bets, SUM(bet_amount) as total_bet_amount FROM bets WHERE user_id = ?",
+    const betsResult = await pool.query(
+      "SELECT COUNT(*) as total_bets, SUM(bet_amount) as total_wagered FROM bets WHERE user_id = $1",
       [userId]
     );
     
-    const [winsResult] = await pool.execute(
-      "SELECT SUM(win_amount) as total_wins FROM bets WHERE user_id = ? AND outcome = 'win'",
+    const winsResult = await pool.query(
+      "SELECT COUNT(*) as total_wins, SUM(win_amount) as total_won FROM bets WHERE user_id = $1 AND outcome = 'win'",
       [userId]
     );
     
-    const [favoritesResult] = await pool.execute(
-      "SELECT COUNT(*) as favorite_games_count FROM user_game_preferences WHERE user_id = ? AND is_favorite = 1",
+    const favoritesResult = await pool.query(
+      "SELECT COUNT(*) as favorite_games FROM user_game_preferences WHERE user_id = $1 AND is_favorite = true",
       [userId]
     );
     
-    const [levelResult] = await pool.execute(
-      `SELECT ul.level_name, ul.min_points, ul.max_points, up.points 
-       FROM user_levels ul 
-       JOIN user_profiles up ON up.user_id = ? 
-       WHERE up.points BETWEEN ul.min_points AND ul.max_points`,
+    const levelResult = await pool.query(
+      "SELECT ul.name as level_name, ulp.current_points, ulp.total_points_earned FROM user_level_progress ulp JOIN user_levels ul ON ulp.level_id = ul.id WHERE ulp.user_id = $1",
       [userId]
     );
 
-    const balance = (balanceResult as any)[0]?.balance || 0;
-    const totalBets = (betsResult as any)[0]?.total_bets || 0;
-    const totalWins = (winsResult as any)[0]?.total_wins || 0;
-    const favoriteGamesCount = (favoritesResult as any)[0]?.favorite_games_count || 0;
-    const levelData = (levelResult as any)[0];
+    const balance = balanceResult.rows[0]?.balance || 0;
+    const totalBets = betsResult.rows[0]?.total_bets || 0;
+    const totalWins = winsResult.rows[0]?.total_wins || 0;
+    const favoriteGamesCount = favoritesResult.rows[0]?.favorite_games || 0;
+    const levelData = levelResult.rows[0];
     
     const levelProgress = levelData ? 
-      ((levelData.points - levelData.min_points) / (levelData.max_points - levelData.min_points)) * 100 : 0;
+      ((levelData.current_points - levelData.min_points) / (levelData.max_points - levelData.min_points)) * 100 : 0;
 
     return {
       total_balance: balance,
@@ -161,28 +158,14 @@ const getUserStats = async (userId: number) => {
 
 const getRecentActivity = async (userId: number) => {
   try {
-    const [activityResult] = await pool.execute(
-      `SELECT 
-        'bet' as type,
-        b.id,
-        g.name as game_name,
-        b.bet_amount,
-        b.outcome,
-        b.win_amount,
-        b.created_at,
-        b.updated_at
-       FROM bets b
-       JOIN games g ON b.game_id = g.id
-       WHERE b.user_id = ?
-       ORDER BY b.created_at DESC
-       LIMIT 10`,
-      [userId]
+    const activityResult = await pool.query(
+      "SELECT action, category, description, created_at FROM user_activity_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2",
+      [userId, 10]
     );
 
-    return (activityResult as any[]).map(activity => ({
+    return activityResult.rows.map(activity => ({
       ...activity,
       created_at: activity.created_at,
-      updated_at: activity.updated_at,
     }));
   } catch (error) {
     console.error("Error fetching recent activity:", error);
@@ -192,26 +175,11 @@ const getRecentActivity = async (userId: number) => {
 
 const getActivePromotions = async () => {
   try {
-    const [promotionsResult] = await pool.execute(
-      `SELECT 
-        id,
-        title,
-        description,
-        promo_type,
-        bonus_amount,
-        wagering_requirement,
-        start_date,
-        end_date,
-        is_active
-       FROM promotions 
-       WHERE is_active = 1 
-       AND start_date <= NOW() 
-       AND end_date >= NOW()
-       ORDER BY created_at DESC
-       LIMIT 5`
+    const promotionsResult = await pool.query(
+      "SELECT id, name, description, type, value, start_date, end_date, is_active FROM promotions WHERE is_active = true AND (end_date IS NULL OR end_date > CURRENT_TIMESTAMP) ORDER BY created_at DESC LIMIT 5"
     );
 
-    return (promotionsResult as any[]).map(promo => ({
+    return promotionsResult.rows.map(promo => ({
       ...promo,
       start_date: promo.start_date,
       end_date: promo.end_date,
@@ -224,22 +192,11 @@ const getActivePromotions = async () => {
 
 const getAnnouncements = async () => {
   try {
-    const [announcementsResult] = await pool.execute(
-      `SELECT 
-        id,
-        title,
-        content,
-        announcement_type,
-        priority,
-        created_at
-       FROM announcements 
-       WHERE is_active = 1 
-       AND (expires_at IS NULL OR expires_at >= NOW())
-       ORDER BY priority DESC, created_at DESC
-       LIMIT 3`
+    const announcementsResult = await pool.query(
+      "SELECT id, title, content, type, is_active, created_at FROM announcements WHERE is_active = true ORDER BY created_at DESC LIMIT 5"
     );
 
-    return (announcementsResult as any[]).map(announcement => ({
+    return announcementsResult.rows.map(announcement => ({
       ...announcement,
       created_at: announcement.created_at,
     }));

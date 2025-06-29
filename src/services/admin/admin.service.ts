@@ -1,7 +1,8 @@
-import { pool } from "../../db/postgres";
+import pool from "../../db/postgres";
 import {
   CreateGameInputType,
   UpdateGameInputType,
+  GameFiltersInputType,
   UserFiltersInputType,
   UpdateUserStatusInputType,
   UpdateUserBalanceInputType,
@@ -38,8 +39,8 @@ export const createGameService = async (gameData: CreateGameInputType) => {
 };
 
 export const updateGameService = async (gameId: number, gameData: UpdateGameInputType) => {
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
   Object.entries(gameData).forEach(([key, value]) => {
@@ -51,7 +52,7 @@ export const updateGameService = async (gameId: number, gameData: UpdateGameInpu
   });
   
   if (fields.length === 0) {
-    throw new Error("No fields to update");
+    throw new Error("No valid fields to update");
   }
   
   values.push(gameId);
@@ -181,6 +182,10 @@ export const getUsersForAdminService = async (filters: UserFiltersInputType) => 
 };
 
 export const updateUserStatusService = async (userId: number, statusData: UpdateUserStatusInputType) => {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+  
   const statusQuery = "SELECT id FROM statuses WHERE name = $1";
   const statusResult = await pool.query(statusQuery, [statusData.status]);
   
@@ -188,18 +193,27 @@ export const updateUserStatusService = async (userId: number, statusData: Update
     throw new Error("Invalid status");
   }
   
+  fields.push(`status_id = $${paramCount}`);
+  values.push(statusResult.rows[0].id);
+  paramCount++;
+  
+  values.push(userId);
   const query = `
     UPDATE users 
-    SET status_id = $1, updated_at = CURRENT_TIMESTAMP
-    WHERE id = $2
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $${paramCount}
     RETURNING *
   `;
   
-  const result = await pool.query(query, [statusResult.rows[0].id, userId]);
+  const result = await pool.query(query, values);
   return result.rows[0];
 };
 
 export const updateUserBalanceService = async (userId: number, balanceData: UpdateUserBalanceInputType) => {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+  
   const client = await pool.connect();
   
   try {
@@ -216,21 +230,30 @@ export const updateUserBalanceService = async (userId: number, balanceData: Upda
     ]);
     
     // Update user balance
+    fields.push(`balance = balance + $${paramCount}`);
+    values.push(balanceData.type === 'withdrawal' ? -balanceData.amount : balanceData.amount);
+    paramCount++;
+    
+    fields.push(`total_deposited = CASE WHEN $${paramCount} = 'deposit' THEN total_deposited + $${paramCount} ELSE total_deposited END`);
+    values.push(balanceData.type);
+    paramCount++;
+    
+    fields.push(`total_withdrawn = CASE WHEN $${paramCount} = 'withdrawal' THEN total_withdrawn + $${paramCount} ELSE total_withdrawn END`);
+    values.push(balanceData.type);
+    paramCount++;
+    
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(new Date());
+    paramCount++;
+    
     const balanceQuery = `
       UPDATE user_balances 
-      SET balance = balance + $1,
-          total_deposited = CASE WHEN $2 = 'deposit' THEN total_deposited + $1 ELSE total_deposited END,
-          total_withdrawn = CASE WHEN $2 = 'withdrawal' THEN total_withdrawn + $1 ELSE total_withdrawn END,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = $3
+      SET ${fields.join(", ")}
+      WHERE user_id = $${paramCount}
       RETURNING *
     `;
     
-    const balanceResult = await client.query(balanceQuery, [
-      balanceData.type === 'withdrawal' ? -balanceData.amount : balanceData.amount,
-      balanceData.type,
-      userId
-    ]);
+    const balanceResult = await client.query(balanceQuery, values);
     
     await client.query('COMMIT');
     
@@ -271,8 +294,8 @@ export const createPaymentGatewayService = async (gatewayData: CreatePaymentGate
 };
 
 export const updatePaymentGatewayService = async (gatewayId: number, gatewayData: UpdatePaymentGatewayInputType) => {
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
   Object.entries(gatewayData).forEach(([key, value]) => {
@@ -446,8 +469,8 @@ export const getSystemSettingsService = async () => {
 };
 
 export const updateSystemSettingsService = async (settings: UpdateSystemSettingsInputType) => {
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
   Object.entries(settings).forEach(([key, value]) => {
@@ -463,10 +486,9 @@ export const updateSystemSettingsService = async (settings: UpdateSystemSettings
   }
   
   const query = `
-    INSERT INTO system_settings (id, ${Object.keys(settings).join(", ")}, updated_at)
-    VALUES (1, ${Object.keys(settings).map((_, i) => `$${i + 1}`).join(", ")}, CURRENT_TIMESTAMP)
-    ON CONFLICT (id) DO UPDATE SET
-    ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    UPDATE system_settings 
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
     RETURNING *
   `;
   
@@ -479,7 +501,7 @@ export const updateSystemSettingsService = async (settings: UpdateSystemSettings
 // =====================================================
 
 export const getDashboardStatsService = async () => {
-  const stats = {};
+  const stats: any = {};
   
   // Total users
   const usersQuery = "SELECT COUNT(*) as total_users FROM users WHERE status_id = (SELECT id FROM statuses WHERE name = 'Active')";

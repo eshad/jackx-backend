@@ -1,5 +1,5 @@
-import { pool } from "../../db/postgres";
-import { UpdateSystemSettingsInputType } from "../../api/admin/admin.schema";
+import pool from "../../db/postgres";
+import { UpdateSystemSettingsInputType, UpdateServerSettingsInputType } from "../../api/admin/admin.schema";
 
 // Create system settings table
 export const createSystemSettingsTable = async () => {
@@ -73,14 +73,14 @@ export const getSystemSettingsService = async () => {
 };
 
 // Update system settings
-export const updateSystemSettingsService = async (settings: UpdateSystemSettingsInputType) => {
+export const updateSystemSettingsService = async (settingsData: UpdateSystemSettingsInputType) => {
   await createSystemSettingsTable();
   
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
-  Object.entries(settings).forEach(([key, value]) => {
+  Object.entries(settingsData).forEach(([key, value]) => {
     if (value !== undefined) {
       fields.push(`${key} = $${paramCount}`);
       values.push(value);
@@ -93,10 +93,9 @@ export const updateSystemSettingsService = async (settings: UpdateSystemSettings
   }
   
   const query = `
-    INSERT INTO system_settings (id, ${Object.keys(settings).join(", ")}, updated_at)
-    VALUES (1, ${Object.keys(settings).map((_, i) => `$${i + 1}`).join(", ")}, CURRENT_TIMESTAMP)
-    ON CONFLICT (id) DO UPDATE SET
-    ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    UPDATE system_settings 
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
     RETURNING *
   `;
   
@@ -114,14 +113,14 @@ export const getServerSettingsService = async () => {
 };
 
 // Update server settings
-export const updateServerSettingsService = async (settings: any) => {
+export const updateServerSettingsService = async (settingsData: UpdateServerSettingsInputType) => {
   await createServerSettingsTable();
   
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
-  Object.entries(settings).forEach(([key, value]) => {
+  Object.entries(settingsData).forEach(([key, value]) => {
     if (value !== undefined) {
       fields.push(`${key} = $${paramCount}`);
       values.push(JSON.stringify(value));
@@ -134,10 +133,9 @@ export const updateServerSettingsService = async (settings: any) => {
   }
   
   const query = `
-    INSERT INTO server_settings (id, ${Object.keys(settings).join(", ")}, updated_at)
-    VALUES (1, ${Object.keys(settings).map((_, i) => `$${i + 1}`).join(", ")}, CURRENT_TIMESTAMP)
-    ON CONFLICT (id) DO UPDATE SET
-    ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    UPDATE server_settings 
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
     RETURNING *
   `;
   

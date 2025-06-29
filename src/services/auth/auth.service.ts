@@ -6,114 +6,81 @@ import { Query } from "../../api/auth/auth.query";
 import { LoginResponse } from "../../api/auth/types/auth";
 import { JwtService } from '../jwt/jwt.service';
 import { ApiError } from "../../utils/apiError";
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { Config } from "../../configs/config";
+import { getUserByUsernameService, getUserRolesService } from "../user/user.service";
+import { logUserActivity } from "../user/user-activity.service";
 
 const jwtService = new JwtService();
 
 export const loginService = async (
-  reqBody: LoginInput
+  username: string,
+  password: string,
+  roleId?: number,
+  req?: Request
 ): Promise<LoginResponse> => {
-  try {
-    const { username, password, role_id } = reqBody;
-
-    // If role_id is provided, login with specific role
-    if (role_id) {
-      const result = await pool.query(
-        `
-        SELECT 
-          u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
-        FROM users u
-        INNER JOIN user_roles ur ON u.id = ur.user_id
-        INNER JOIN roles r ON ur.role_id = r.id
-        WHERE u.username = $1 AND r.id = $2
-        LIMIT 1
-        `,
-        [username, role_id]
-      );
-
-      if (result.rows.length === 0) {
-        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-      }
-
-      const user = result.rows[0];
-
-      // Compare password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-      }
-
-      // Sign JWT with user ID and role name
-      const payload = {
-        userId: user.id,
-        username: user.username,
-        role: user.role_name,
-      };
-
-      const accessToken = jwtService.signAccessToken(payload);
-      const refreshToken = jwtService.signRefreshToken(payload);
-
-      return {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        role: {
-          id: user.role_id,
-          username: user.username,
-          name: user.role_name,
-          description: user.role_description,
-        },
-      };
-    } else {
-      // If no role_id provided, login with default Player role
-      const result = await pool.query(
-        `
-        SELECT 
-          u.id, u.username, u.password, r.id AS role_id, r.name AS role_name, r.description AS role_description
-        FROM users u
-        INNER JOIN user_roles ur ON u.id = ur.user_id
-        INNER JOIN roles r ON ur.role_id = r.id
-        WHERE u.username = $1 AND r.name = 'Player'
-        LIMIT 1
-        `,
-        [username]
-      );
-
-      if (result.rows.length === 0) {
-        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-      }
-
-      const user = result.rows[0];
-
-      // Compare password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
-      }
-
-      // Sign JWT with user ID and role name
-      const payload = {
-        userId: user.id,
-        username: user.username,
-        role: user.role_name,
-      };
-
-      const accessToken = jwtService.signAccessToken(payload);
-      const refreshToken = jwtService.signRefreshToken(payload);
-
-      return {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        role: {
-          id: user.role_id,
-          username: user.username,
-          name: user.role_name,
-          description: user.role_description,
-        },
-      };
-    }
-  } catch (err) {
-    console.error(`[Login Error] ${err instanceof Error ? err.message : err}`);
-    throw err;
+  const user = await getUserByUsernameService(username);
+  
+  if (!user) {
+    throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
   }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new ApiError(ErrorMessages.INVALID_CREDENTIALS, 401);
+  }
+
+  // Get user roles
+  const userRolesResult = await pool.query(
+    "SELECT r.id, r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1",
+    [user.id]
+  );
+  
+  const userRoles = userRolesResult.rows;
+  
+  if (userRoles.length === 0) {
+    throw new ApiError('User has no assigned roles', 401);
+  }
+  
+  // Determine which role to use
+  let selectedRole = userRoles.find(role => role.name === "player"); // Default to player
+  
+  if (roleId) {
+    const requestedRole = userRoles.find(role => role.id === roleId);
+    if (requestedRole) {
+      selectedRole = requestedRole;
+    }
+  }
+
+  if (!selectedRole) {
+    throw new Error("No valid role found for user");
+  }
+
+  const payload = { 
+    userId: user.id, 
+    username: user.username,
+    role: selectedRole.name,
+    roleId: selectedRole.id
+  };
+
+  const accessToken = jwtService.signAccessToken(payload);
+  const refreshToken = jwtService.signRefreshToken(payload);
+
+  // Log user login activity
+  await logUserActivity({
+    userId: user.id,
+    action: "login",
+    category: "auth",
+    description: "User logged in",
+    ipAddress: req?.ip || null,
+    userAgent: req?.headers["user-agent"] || null,
+  });
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken
+  };
 };
 
 export const registerService = async (
@@ -199,25 +166,33 @@ export const registerService = async (
   }
 };
 
-export const getUserRolesService = async (username: string) => {
+export const refreshTokenService = async (
+  refreshToken: string
+): Promise<LoginResponse> => {
   try {
-    const result = await pool.query(
-      `
-      SELECT 
-        r.id, r.name, r.description
-      FROM users u
-      INNER JOIN user_roles ur ON u.id = ur.user_id
-      INNER JOIN roles r ON ur.role_id = r.id
-      WHERE u.username = $1
-      ORDER BY r.name
-      `,
-      [username]
-    );
+    const decoded = jwtService.verifyRefreshToken(refreshToken);
+    
+    const user = await getUserByUsernameService(decoded.username);
+    if (!user) {
+      throw new Error("User not found");
+    }
 
-    return result.rows;
-  } catch (err) {
-    console.error(`[Get User Roles Error] ${err instanceof Error ? err.message : err}`);
-    throw err;
+    const payload = { 
+      userId: user.id, 
+      username: user.username,
+      role: decoded.role,
+      roleId: decoded.roleId
+    };
+
+    const accessToken = jwtService.signAccessToken(payload);
+    const newRefreshToken = jwtService.signRefreshToken(payload);
+
+    return {
+      access_token: accessToken,
+      refresh_token: newRefreshToken
+    };
+  } catch (error) {
+    throw new Error("Invalid refresh token");
   }
 };
 
@@ -227,32 +202,27 @@ export const refreshToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const refreshToken = req.body.refresh_token;
+    const refreshToken = req.body?.refresh_token;
+    
     if (!refreshToken) {
-      throw new ApiError("Refresh token is required", 400);
+      res.status(400).json({
+        success: false,
+        message: "Refresh token is required"
+      });
+      return;
     }
 
-    // Validate and decode refresh token
-    const decoded = jwtService.verifyRefreshToken(refreshToken);
-
-    const payload = {
-      userId: decoded.userId,
-      username: decoded.username,
-      role: decoded.role,
-    };
-
-    const newAccessToken = jwtService.signAccessToken(payload);
-    const newRefreshToken = jwtService.signRefreshToken(payload);
-
+    const tokens = await refreshTokenService(refreshToken);
+    
     res.json({
       success: true,
-      message: "Token refreshed successfully",
-      token: {
-        access_token: newAccessToken,
-        refresh_token: newRefreshToken,
-      },
+      message: "Tokens refreshed successfully",
+      data: tokens
     });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(401).json({
+      success: false,
+      message: error.message
+    });
   }
 };

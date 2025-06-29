@@ -22,7 +22,8 @@ import {
   recordGamePlay,
   placeBet,
   processBetResult,
-  getAvailableGamesLegacy
+  getAvailableGamesLegacy,
+  playGame
 } from "../api/game/game.controller";
 import { authenticate } from "../middlewares/authenticate";
 import { authorize } from "../middlewares/authorize";
@@ -32,10 +33,16 @@ import {
   ProcessBetResultSchema, 
   RecordGamePlaySchema, 
   ToggleGameFavoriteSchema,
-  GameFiltersSchema
+  GameFiltersSchema,
+  PlayGameSchema
 } from "../api/game/game.schema";
 import adminRoutes from "./admin.routes";
 const router = Router();
+
+// Create a wrapper for the authorize middleware
+const adminAuth = (req: any, res: any, next: any) => {
+  authorize(['admin'])(req, res, next);
+};
 
 // Define all routes here (like PHP api.php)
 
@@ -655,7 +662,7 @@ router.post("/games/favorite", authenticate, validate({ body: ToggleGameFavorite
  * @openapi
  * /api/games/play:
  *   post:
- *     summary: Record game play
+ *     summary: Get play URL and game info from provider
  *     tags:
  *       - Game
  *     security:
@@ -671,19 +678,28 @@ router.post("/games/favorite", authenticate, validate({ body: ToggleGameFavorite
  *             properties:
  *               game_id:
  *                 type: integer
- *                 description: Game ID
- *               play_time_seconds:
- *                 type: integer
- *                 description: Time played in seconds
+ *                 description: Game ID to play
  *     responses:
  *       200:
- *         description: Successfully recorded game play
+ *         description: Successfully returns play URL and game info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     play_url:
+ *                       type: string
+ *                     game:
+ *                       type: object
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Game not found
  */
-router.post("/games/play", authenticate, validate({ body: RecordGamePlaySchema }), recordGamePlay);
+router.post("/games/play", authenticate, validate({ body: PlayGameSchema }), playGame);
 
 /**
  * @openapi
@@ -767,7 +783,7 @@ router.post("/games/bet", authenticate, validate({ body: PlaceBetSchema }), plac
  *       404:
  *         description: Bet not found
  */
-router.post("/games/bet/result", authenticate, authorize(['admin']), validate({ body: ProcessBetResultSchema }), processBetResult);
+router.post("/games/bet/result", authenticate, adminAuth, validate({ body: ProcessBetResultSchema }), processBetResult);
 
 // Legacy game endpoint for backward compatibility
 /**

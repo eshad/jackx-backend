@@ -33,6 +33,7 @@ class JwtService {
             expiresIn: this.refreshTokenExpiresIn,
             ...options,
         };
+        console.log("[JWT] Signing refresh token with secret:", this.refreshSecret);
         return jsonwebtoken_1.default.sign(payload, this.refreshSecret, refreshTokenOptions);
     }
     verifyAccessToken(token, options = {}) {
@@ -52,10 +53,13 @@ class JwtService {
     }
     verifyRefreshToken(token, options = {}) {
         try {
+            console.log("[JWT] Verifying refresh token with secret:", this.refreshSecret);
             const decoded = jsonwebtoken_1.default.verify(token, this.refreshSecret, options);
+            console.log("[JWT] Decoded refresh token:", decoded);
             return jwt_schema_1.TokenPayloadSchema.parse(decoded); // runtime validation
         }
         catch (err) {
+            console.error("[JWT] Refresh token verification error:", err.message);
             if (err.name === 'TokenExpiredError') {
                 throw new apiError_1.ApiError(messages_1.ErrorMessages.EXPIRED_REFRESH_TOKEN, 401);
             }

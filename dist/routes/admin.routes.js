@@ -1,60 +1,26 @@
-import { Router } from "express";
-import { validate as validateRequest } from "../middlewares/validate";
-import { authenticate } from "../middlewares/authenticate";
-import { authorize } from "../middlewares/authorize";
-import {
-  CreateGameInput,
-  UpdateGameInput,
-  UserFiltersInput,
-  UpdateUserStatusInput,
-  UpdateUserBalanceInput
-} from "../api/admin/admin.schema";
-import {
-  // Game Management
-  createGame,
-  updateGame,
-  deleteGame,
-  getGamesForAdmin,
-  // User Management
-  getUsersForAdmin,
-  updateUserStatus,
-  updateUserBalance,
-  // Dashboard
-  getDashboardStats,
-  // Provider Management
-  getProviders,
-  createProvider,
-  // Transaction Management
-  getTransactions,
-  approveTransaction,
-  // Settings
-  getSystemSettings,
-  updateSystemSettings,
-  // Analytics
-  getRevenueAnalytics,
-  getUserAnalytics
-} from "../api/admin/admin.controller";
-
-const router = Router();
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const validate_1 = require("../middlewares/validate");
+const authenticate_1 = require("../middlewares/authenticate");
+const authorize_1 = require("../middlewares/authorize");
+const admin_schema_1 = require("../api/admin/admin.schema");
+const admin_controller_1 = require("../api/admin/admin.controller");
+const router = (0, express_1.Router)();
 // Create a wrapper for the authorize middleware
-const adminAuth = (req: any, res: any, next: any) => {
-  authorize(["admin"])(req, res, next);
+const adminAuth = (req, res, next) => {
+    (0, authorize_1.authorize)(["admin"])(req, res, next);
 };
-
 // Apply authentication and admin role middleware to all routes
-router.use(authenticate);
+router.use(authenticate_1.authenticate);
 router.use(adminAuth);
-
 // Test route
 router.get("/test", (req, res) => {
-  res.json({ message: "Admin routes working" });
+    res.json({ message: "Admin routes working" });
 });
-
 // =====================================================
 // DASHBOARD ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/dashboard/stats:
@@ -62,7 +28,7 @@ router.get("/test", (req, res) => {
  *     summary: Get dashboard statistics
  *     tags: [Admin Dashboard]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Dashboard statistics retrieved successfully
@@ -91,12 +57,10 @@ router.get("/test", (req, res) => {
  *                     todayWagered:
  *                       type: number
  */
-router.get("/dashboard/stats", getDashboardStats);
-
+router.get("/dashboard/stats", admin_controller_1.getDashboardStats);
 // =====================================================
 // GAME MANAGEMENT ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/games:
@@ -104,7 +68,7 @@ router.get("/dashboard/stats", getDashboardStats);
  *     summary: Get all games for admin
  *     tags: [Admin Games]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: provider
@@ -134,8 +98,7 @@ router.get("/dashboard/stats", getDashboardStats);
  *       200:
  *         description: Games retrieved successfully
  */
-router.get("/games", getGamesForAdmin);
-
+router.get("/games", admin_controller_1.getGamesForAdmin);
 /**
  * @swagger
  * /api/admin/games:
@@ -143,7 +106,7 @@ router.get("/games", getGamesForAdmin);
  *     summary: Create a new game
  *     tags: [Admin Games]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -189,8 +152,7 @@ router.get("/games", getGamesForAdmin);
  *       201:
  *         description: Game created successfully
  */
-router.post("/games", validateRequest({ body: CreateGameInput }), createGame);
-
+router.post("/games", (0, validate_1.validate)({ body: admin_schema_1.CreateGameInput }), admin_controller_1.createGame);
 /**
  * @swagger
  * /api/admin/games/{id}:
@@ -198,7 +160,7 @@ router.post("/games", validateRequest({ body: CreateGameInput }), createGame);
  *     summary: Update a game
  *     tags: [Admin Games]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -215,8 +177,7 @@ router.post("/games", validateRequest({ body: CreateGameInput }), createGame);
  *       200:
  *         description: Game updated successfully
  */
-router.put("/games/:id", validateRequest({ body: UpdateGameInput }), updateGame);
-
+router.put("/games/:id", (0, validate_1.validate)({ body: admin_schema_1.UpdateGameInput }), admin_controller_1.updateGame);
 /**
  * @swagger
  * /api/admin/games/{id}:
@@ -224,7 +185,7 @@ router.put("/games/:id", validateRequest({ body: UpdateGameInput }), updateGame)
  *     summary: Delete a game
  *     tags: [Admin Games]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -235,12 +196,10 @@ router.put("/games/:id", validateRequest({ body: UpdateGameInput }), updateGame)
  *       200:
  *         description: Game deleted successfully
  */
-router.delete("/games/:id", deleteGame);
-
+router.delete("/games/:id", admin_controller_1.deleteGame);
 // =====================================================
 // USER MANAGEMENT ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/users:
@@ -248,7 +207,7 @@ router.delete("/games/:id", deleteGame);
  *     summary: Get all users for admin
  *     tags: [Admin Users]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: status
@@ -274,8 +233,7 @@ router.delete("/games/:id", deleteGame);
  *       200:
  *         description: Users retrieved successfully
  */
-router.get("/users", getUsersForAdmin);
-
+router.get("/users", admin_controller_1.getUsersForAdmin);
 /**
  * @swagger
  * /api/admin/users/{id}/status:
@@ -283,7 +241,7 @@ router.get("/users", getUsersForAdmin);
  *     summary: Update user status
  *     tags: [Admin Users]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -308,8 +266,7 @@ router.get("/users", getUsersForAdmin);
  *       200:
  *         description: User status updated successfully
  */
-router.put("/users/:id/status", validateRequest({ body: UpdateUserStatusInput }), updateUserStatus);
-
+router.put("/users/:id/status", (0, validate_1.validate)({ body: admin_schema_1.UpdateUserStatusInput }), admin_controller_1.updateUserStatus);
 /**
  * @swagger
  * /api/admin/users/{id}/balance:
@@ -317,7 +274,7 @@ router.put("/users/:id/status", validateRequest({ body: UpdateUserStatusInput })
  *     summary: Update user balance
  *     tags: [Admin Users]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -345,12 +302,10 @@ router.put("/users/:id/status", validateRequest({ body: UpdateUserStatusInput })
  *       200:
  *         description: User balance updated successfully
  */
-router.put("/users/:id/balance", validateRequest({ body: UpdateUserBalanceInput }), updateUserBalance);
-
+router.put("/users/:id/balance", (0, validate_1.validate)({ body: admin_schema_1.UpdateUserBalanceInput }), admin_controller_1.updateUserBalance);
 // =====================================================
 // PROVIDER MANAGEMENT ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/providers:
@@ -358,13 +313,12 @@ router.put("/users/:id/balance", validateRequest({ body: UpdateUserBalanceInput 
  *     summary: Get all payment providers
  *     tags: [Admin Providers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Providers retrieved successfully
  */
-router.get("/providers", getProviders);
-
+router.get("/providers", admin_controller_1.getProviders);
 /**
  * @swagger
  * /api/admin/providers:
@@ -372,7 +326,7 @@ router.get("/providers", getProviders);
  *     summary: Create a new payment provider
  *     tags: [Admin Providers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -413,12 +367,10 @@ router.get("/providers", getProviders);
  *       201:
  *         description: Provider created successfully
  */
-router.post("/providers", createProvider);
-
+router.post("/providers", admin_controller_1.createProvider);
 // =====================================================
 // TRANSACTION MANAGEMENT ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/transactions:
@@ -426,7 +378,7 @@ router.post("/providers", createProvider);
  *     summary: Get all transactions for admin
  *     tags: [Admin Transactions]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: type
@@ -458,8 +410,7 @@ router.post("/providers", createProvider);
  *       200:
  *         description: Transactions retrieved successfully
  */
-router.get("/transactions", getTransactions);
-
+router.get("/transactions", admin_controller_1.getTransactions);
 /**
  * @swagger
  * /api/admin/transactions/{id}/approve:
@@ -467,7 +418,7 @@ router.get("/transactions", getTransactions);
  *     summary: Approve or reject a transaction
  *     tags: [Admin Transactions]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -492,12 +443,10 @@ router.get("/transactions", getTransactions);
  *       200:
  *         description: Transaction status updated successfully
  */
-router.put("/transactions/:id/approve", approveTransaction);
-
+router.put("/transactions/:id/approve", admin_controller_1.approveTransaction);
 // =====================================================
 // SETTINGS ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/settings:
@@ -505,13 +454,12 @@ router.put("/transactions/:id/approve", approveTransaction);
  *     summary: Get system settings
  *     tags: [Admin Settings]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Settings retrieved successfully
  */
-router.get("/settings", getSystemSettings);
-
+router.get("/settings", admin_controller_1.getSystemSettings);
 /**
  * @swagger
  * /api/admin/settings:
@@ -519,7 +467,7 @@ router.get("/settings", getSystemSettings);
  *     summary: Update system settings
  *     tags: [Admin Settings]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -545,12 +493,10 @@ router.get("/settings", getSystemSettings);
  *       200:
  *         description: Settings updated successfully
  */
-router.put("/settings", updateSystemSettings);
-
+router.put("/settings", admin_controller_1.updateSystemSettings);
 // =====================================================
 // ANALYTICS ROUTES
 // =====================================================
-
 /**
  * @swagger
  * /api/admin/analytics/revenue:
@@ -558,7 +504,7 @@ router.put("/settings", updateSystemSettings);
  *     summary: Get revenue analytics
  *     tags: [Admin Analytics]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: start_date
@@ -572,8 +518,7 @@ router.put("/settings", updateSystemSettings);
  *       200:
  *         description: Revenue analytics retrieved successfully
  */
-router.get("/analytics/revenue", getRevenueAnalytics);
-
+router.get("/analytics/revenue", admin_controller_1.getRevenueAnalytics);
 /**
  * @swagger
  * /api/admin/analytics/users:
@@ -581,7 +526,7 @@ router.get("/analytics/revenue", getRevenueAnalytics);
  *     summary: Get user analytics
  *     tags: [Admin Analytics]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: start_date
@@ -595,6 +540,5 @@ router.get("/analytics/revenue", getRevenueAnalytics);
  *       200:
  *         description: User analytics retrieved successfully
  */
-router.get("/analytics/users", getUserAnalytics);
-
-export default router; 
+router.get("/analytics/users", admin_controller_1.getUserAnalytics);
+exports.default = router;

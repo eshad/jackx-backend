@@ -13,14 +13,16 @@ import {
   toggleGameFavoriteService,
   recordGamePlayService,
   placeBetService,
-  processBetResultService
+  processBetResultService,
+  getGamePlayInfoService
 } from "../../services/game/game.service";
 import {
   PlaceBetInput,
   ProcessBetResultInput,
   RecordGamePlayInput,
   ToggleGameFavoriteInput,
-  GameFiltersInput
+  GameFiltersInput,
+  PlayGameInput
 } from "./game.schema";
 
 // Get all available games with filtering
@@ -254,4 +256,28 @@ export const getAvailableGamesLegacy = (req: Request, res: Response) => {
       { id: 3, name: "Poker" },
     ],
   });
+};
+
+// Play game (get play URL and info from provider)
+export const playGame = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+    const { game_id } = req.validated?.body as PlayGameInput;
+    if (!game_id && game_id !== 0) {
+      res.status(400).json({ success: false, message: "game_id is required" });
+      return;
+    }
+    const playInfo = await getGamePlayInfoService(game_id, userId);
+    res.status(200).json({ success: true, data: playInfo });
+  } catch (err) {
+    next(err);
+  }
 };

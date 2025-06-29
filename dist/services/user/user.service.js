@@ -1,8 +1,12 @@
-import pool from "../../db/postgres";
-
-export const getUserWithBalanceService = async (userId: number) => {
-  const result = await pool.query(
-    `
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getUserRolesService = exports.getUserByUsernameService = exports.getUserBettingHistoryService = exports.getUserTransactionHistoryService = exports.getUserRecentActivityService = exports.getUserFavoriteGamesService = exports.getUserWithBalanceService = void 0;
+const postgres_1 = __importDefault(require("../../db/postgres"));
+const getUserWithBalanceService = async (userId) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       u.id, 
       u.username, 
@@ -101,21 +105,16 @@ export const getUserWithBalanceService = async (userId: number) => {
       r.name, r.description,
       ul.name, ul.description, ulp.current_points, ulp.total_points_earned,
       ul.cashback_percentage, ul.withdrawal_limit
-    `,
-    [userId]
-  );
-
-  if (result.rows.length === 0) {
-    throw new Error("User not found");
-  }
-
-  return result.rows[0];
+    `, [userId]);
+    if (result.rows.length === 0) {
+        throw new Error("User not found");
+    }
+    return result.rows[0];
 };
-
+exports.getUserWithBalanceService = getUserWithBalanceService;
 // Get user's favorite games
-export const getUserFavoriteGamesService = async (userId: number) => {
-  const result = await pool.query(
-    `
+const getUserFavoriteGamesService = async (userId) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       g.id,
       g.name,
@@ -132,17 +131,13 @@ export const getUserFavoriteGamesService = async (userId: number) => {
     WHERE ugp.user_id = $1 AND (ugp.is_favorite = TRUE OR ugp.play_count > 0)
     ORDER BY ugp.play_count DESC, ugp.last_played_at DESC
     LIMIT 10
-    `,
-    [userId]
-  );
-
-  return result.rows;
+    `, [userId]);
+    return result.rows;
 };
-
+exports.getUserFavoriteGamesService = getUserFavoriteGamesService;
 // Get user's recent activity
-export const getUserRecentActivityService = async (userId: number, limit: number = 20) => {
-  const result = await pool.query(
-    `
+const getUserRecentActivityService = async (userId, limit = 20) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       action,
       category,
@@ -153,17 +148,13 @@ export const getUserRecentActivityService = async (userId: number, limit: number
     WHERE user_id = $1
     ORDER BY created_at DESC
     LIMIT $2
-    `,
-    [userId, limit]
-  );
-
-  return result.rows;
+    `, [userId, limit]);
+    return result.rows;
 };
-
+exports.getUserRecentActivityService = getUserRecentActivityService;
 // Get user's transaction history
-export const getUserTransactionHistoryService = async (userId: number, limit: number = 50) => {
-  const result = await pool.query(
-    `
+const getUserTransactionHistoryService = async (userId, limit = 50) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       id,
       type,
@@ -178,17 +169,13 @@ export const getUserTransactionHistoryService = async (userId: number, limit: nu
     WHERE user_id = $1
     ORDER BY created_at DESC
     LIMIT $2
-    `,
-    [userId, limit]
-  );
-
-  return result.rows;
+    `, [userId, limit]);
+    return result.rows;
 };
-
+exports.getUserTransactionHistoryService = getUserTransactionHistoryService;
 // Get user's betting history
-export const getUserBettingHistoryService = async (userId: number, limit: number = 50) => {
-  const result = await pool.query(
-    `
+const getUserBettingHistoryService = async (userId, limit = 50) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       b.id,
       b.bet_amount,
@@ -204,17 +191,13 @@ export const getUserBettingHistoryService = async (userId: number, limit: number
     WHERE b.user_id = $1
     ORDER BY b.placed_at DESC
     LIMIT $2
-    `,
-    [userId, limit]
-  );
-
-  return result.rows;
+    `, [userId, limit]);
+    return result.rows;
 };
-
+exports.getUserBettingHistoryService = getUserBettingHistoryService;
 // Get user by username
-export const getUserByUsernameService = async (username: string) => {
-  const result = await pool.query(
-    `
+const getUserByUsernameService = async (username) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       u.id, 
       u.username, 
@@ -226,21 +209,16 @@ export const getUserByUsernameService = async (username: string) => {
     LEFT JOIN statuses s ON u.status_id = s.id
     WHERE u.username = $1
     LIMIT 1
-    `,
-    [username]
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return result.rows[0];
+    `, [username]);
+    if (result.rows.length === 0) {
+        return null;
+    }
+    return result.rows[0];
 };
-
+exports.getUserByUsernameService = getUserByUsernameService;
 // Get user roles by username
-export const getUserRolesService = async (username: string) => {
-  const result = await pool.query(
-    `
+const getUserRolesService = async (username) => {
+    const result = await postgres_1.default.query(`
     SELECT 
       r.id,
       r.name,
@@ -250,9 +228,7 @@ export const getUserRolesService = async (username: string) => {
     INNER JOIN roles r ON ur.role_id = r.id
     WHERE u.username = $1
     ORDER BY r.name
-    `,
-    [username]
-  );
-
-  return result.rows;
+    `, [username]);
+    return result.rows;
 };
+exports.getUserRolesService = getUserRolesService;

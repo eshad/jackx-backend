@@ -28,6 +28,11 @@ export const ToggleGameFavoriteSchema = z.object({
   game_id: z.number().positive("Game ID must be a positive number"),
 });
 
+// Schema for playing a game
+export const PlayGameSchema = z.object({
+  game_id: z.number().positive("Game ID must be a positive number"),
+});
+
 // Schema for game filters (query parameters)
 export const GameFiltersSchema = z.object({
   category: z.string().optional(),
@@ -45,4 +50,5 @@ export type PlaceBetInput = z.infer<typeof PlaceBetSchema>;
 export type ProcessBetResultInput = z.infer<typeof ProcessBetResultSchema>;
 export type RecordGamePlayInput = z.infer<typeof RecordGamePlaySchema>;
 export type ToggleGameFavoriteInput = z.infer<typeof ToggleGameFavoriteSchema>;
+export type PlayGameInput = z.infer<typeof PlayGameSchema>;
 export type GameFiltersInput = z.infer<typeof GameFiltersSchema>; 

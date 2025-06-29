@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { loginService, registerService, refreshToken as refreshTokenService, getUserRolesService } from "../../services/auth/auth.service";
+import { loginService, registerService, refreshToken as refreshTokenService } from "../../services/auth/auth.service";
+import { getUserRolesService } from "../../services/user/user.service";
 import { LoginInput, RegisterInput } from "./auth.schema";
 import { SuccessMessages } from "../../constants/messages";
 
@@ -10,7 +11,7 @@ export const login = async (
 ): Promise<void> => {
   try {
     const reqBody = req.validated?.body as LoginInput;
-    const response = await loginService(reqBody);
+    const response = await loginService(reqBody.username, reqBody.password, reqBody.role_id, req);
     res.json({ success: true, message: SuccessMessages.LOGIN_SUCCESS , token: response });
   } catch (err) {
     next(err);

@@ -12,7 +12,7 @@ const router = express_1.default.Router();
  * @openapi
  * /api/auth/login:
  *   post:
- *     summary: Login with email and password
+ *     summary: Login with username and password
  *     tags:
  *       - Auth
  *     requestBody:
@@ -22,15 +22,20 @@ const router = express_1.default.Router();
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - username
  *               - password
  *             properties:
- *               email:
+ *               username:
  *                 type: string
- *                 example: user@example.com
+ *                 example: player1
  *               password:
  *                 type: string
- *                 example: Pass1234
+ *                 example: qwer1234
+ *               role_id:
+ *                 type: number
+ *                 optional: true
+ *                 description: Optional role ID to login with specific role. If not provided, defaults to Player role.
+ *                 example: 2
  *     responses:
  *       200:
  *         description: Login success
@@ -46,8 +51,29 @@ const router = express_1.default.Router();
  *                   type: string
  *                   example: Logged in successfully
  *                 token:
- *                   type: string
- *                   example: eyJhbGciOi...
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                       example: eyJhbGciOi...
+ *                     refresh_token:
+ *                       type: string
+ *                       example: eyJhbGciOi...
+ *                     role:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: number
+ *                           example: 1
+ *                         username:
+ *                           type: string
+ *                           example: player1
+ *                         name:
+ *                           type: string
+ *                           example: Player
+ *                         description:
+ *                           type: string
+ *                           example: Regular player account
  *       401:
  *         description: Invalid credentials
  */
@@ -69,12 +95,15 @@ router.post("/login", (0, validate_1.validate)({ body: auth_schema_1.LoginSchema
  *               - email
  *               - password
  *             properties:
+ *               username:
+ *                 type: string
+ *                 example: user01
  *               email:
  *                 type: string
- *                 example: newuser@example.com
+ *                 example: user@live.com
  *               password:
  *                 type: string
- *                 example: StrongPassword123!
+ *                 example: qwer1234
  *     responses:
  *       200:
  *         description: User registered successfully
@@ -93,4 +122,88 @@ router.post("/login", (0, validate_1.validate)({ body: auth_schema_1.LoginSchema
  *         description: Validation failed
  */
 router.post("/register", (0, validate_1.validate)({ body: auth_schema_1.RegisterSchema }), auth_controller_1.register);
+/**
+ * @openapi
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh JWT tokens
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 example: your_refresh_token_here
+ *     responses:
+ *       200:
+ *         description: New tokens generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                     refresh_token:
+ *                       type: string
+ */
+router.post("/refresh", auth_controller_1.refreshToken);
+/**
+ * @openapi
+ * /api/auth/user-roles:
+ *   get:
+ *     summary: Get available roles for a user
+ *     tags:
+ *       - Auth
+ *     parameters:
+ *       - in: query
+ *         name: username
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Username to get roles for
+ *         example: player1
+ *     responses:
+ *       200:
+ *         description: User roles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: number
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: Player
+ *                       description:
+ *                         type: string
+ *                         example: Regular player account
+ *       400:
+ *         description: Username is required
+ *       401:
+ *         description: User not found
+ */
+router.get("/user-roles", auth_controller_1.getUserRoles);
 exports.default = router;

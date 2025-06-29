@@ -7,18 +7,21 @@ import {
   getUsersForAdminService,
   updateUserStatusService,
   updateUserBalanceService,
-  getDashboardStatsService,
-  getTransactionsForAdminService,
   approveTransactionService,
+  getDashboardStatsService,
+  getSystemSettingsService,
+  updateSystemSettingsService,
+  getTransactionsForAdminService,
   getRevenueAnalyticsService,
   getUserAnalyticsService
 } from "../../services/admin/admin.service";
 import {
-  CreateGameInput,
-  UpdateGameInput,
-  UserFiltersInput,
-  UpdateUserStatusInput,
-  UpdateUserBalanceInput
+  CreateGameInputType,
+  UpdateGameInputType,
+  UserFiltersInputType,
+  UpdateUserStatusInputType,
+  UpdateUserBalanceInputType,
+  ApproveTransactionInputType
 } from "./admin.schema";
 
 // =====================================================
@@ -31,11 +34,11 @@ export const createGame = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const gameData = req.validated?.body as CreateGameInput;
+    const gameData = req.validated?.body as CreateGameInputType;
     const game = await createGameService(gameData);
     res.status(201).json({ success: true, data: game });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -51,11 +54,11 @@ export const updateGame = async (
       return;
     }
 
-    const gameData = req.validated?.body as UpdateGameInput;
+    const gameData = req.validated?.body as UpdateGameInputType;
     const game = await updateGameService(gameId, gameData);
     res.status(200).json({ success: true, data: game });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -102,11 +105,11 @@ export const getUsersForAdmin = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const filters: UserFiltersInput = req.query as any;
+    const filters: UserFiltersInputType = req.query as any;
     const users = await getUsersForAdminService(filters);
     res.status(200).json({ success: true, data: users });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -122,11 +125,11 @@ export const updateUserStatus = async (
       return;
     }
 
-    const statusData = req.validated?.body as UpdateUserStatusInput;
+    const statusData = req.validated?.body as UpdateUserStatusInputType;
     const user = await updateUserStatusService(userId, statusData);
     res.status(200).json({ success: true, data: user });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -142,11 +145,11 @@ export const updateUserBalance = async (
       return;
     }
 
-    const balanceData = req.validated?.body as UpdateUserBalanceInput;
+    const balanceData = req.validated?.body as UpdateUserBalanceInputType;
     const result = await updateUserBalanceService(userId, balanceData);
     res.status(200).json({ success: true, data: result });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -177,11 +180,10 @@ export const getProviders = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // This will be implemented in the service
-    const providers = [];
+    const providers: any[] = [];
     res.status(200).json({ success: true, data: providers });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -202,17 +204,13 @@ export const createProvider = async (
 // TRANSACTION MANAGEMENT CONTROLLERS
 // =====================================================
 
-export const getTransactionsForAdmin = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const getTransactions = async (req: Request, res: Response) => {
   try {
     const filters = req.query as any;
     const transactions = await getTransactionsForAdminService(filters);
     res.status(200).json({ success: true, data: transactions });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -229,10 +227,15 @@ export const approveTransaction = async (
     }
 
     const { status, reason } = req.body;
-    const transaction = await approveTransactionService(transactionId, status, reason);
+    const approvalData: ApproveTransactionInputType = {
+      transaction_id: transactionId,
+      status,
+      reason
+    };
+    const transaction = await approveTransactionService(approvalData);
     res.status(200).json({ success: true, data: transaction });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -271,30 +274,34 @@ export const updateSystemSettings = async (
 // ANALYTICS CONTROLLERS
 // =====================================================
 
-export const getRevenueAnalytics = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const getRevenueAnalytics = async (req: Request, res: Response) => {
   try {
     const { start_date, end_date } = req.query;
+    
+    if (!start_date || !end_date) {
+      res.status(400).json({ success: false, message: "Start date and end date are required" });
+      return;
+    }
+    
     const analytics = await getRevenueAnalyticsService(start_date as string, end_date as string);
     res.status(200).json({ success: true, data: analytics });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const getUserAnalytics = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const getUserAnalytics = async (req: Request, res: Response) => {
   try {
     const { start_date, end_date } = req.query;
+    
+    if (!start_date || !end_date) {
+      res.status(400).json({ success: false, message: "Start date and end date are required" });
+      return;
+    }
+    
     const analytics = await getUserAnalyticsService(start_date as string, end_date as string);
     res.status(200).json({ success: true, data: analytics });
-  } catch (err) {
-    next(err);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 }; 

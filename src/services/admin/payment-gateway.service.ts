@@ -1,4 +1,4 @@
-import { pool } from "../../db/postgres";
+import pool from "../../db/postgres";
 import {
   CreatePaymentGatewayInputType,
   UpdatePaymentGatewayInputType
@@ -9,9 +9,9 @@ export const createPaymentGatewayTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS payment_gateways (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      code VARCHAR(50) NOT NULL UNIQUE,
-      type VARCHAR(20) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'both')),
+      name VARCHAR(255) NOT NULL,
+      code VARCHAR(100) UNIQUE NOT NULL,
+      type VARCHAR(50) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'both')),
       description TEXT,
       logo_url TEXT,
       website_url TEXT,
@@ -20,19 +20,19 @@ export const createPaymentGatewayTable = async () => {
       api_secret TEXT,
       webhook_url TEXT,
       webhook_secret TEXT,
-      is_active BOOLEAN DEFAULT TRUE,
+      is_active BOOLEAN DEFAULT true,
       supported_currencies TEXT[],
       supported_countries TEXT[],
-      min_amount NUMERIC(20,2),
-      max_amount NUMERIC(20,2),
-      processing_time VARCHAR(50),
-      fees_percentage NUMERIC(5,2) DEFAULT 0,
-      fees_fixed NUMERIC(20,2) DEFAULT 0,
-      auto_approval BOOLEAN DEFAULT FALSE,
-      requires_kyc BOOLEAN DEFAULT FALSE,
+      min_amount DECIMAL(15,2),
+      max_amount DECIMAL(15,2),
+      processing_time VARCHAR(100),
+      fees_percentage DECIMAL(5,2) DEFAULT 0,
+      fees_fixed DECIMAL(15,2) DEFAULT 0,
+      auto_approval BOOLEAN DEFAULT false,
+      requires_kyc BOOLEAN DEFAULT false,
       config JSONB,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `;
   
@@ -45,25 +45,37 @@ export const createPaymentGatewayService = async (gatewayData: CreatePaymentGate
   
   const query = `
     INSERT INTO payment_gateways (
-      name, code, type, description, logo_url, website_url,
-      api_endpoint, api_key, api_secret, webhook_url, webhook_secret,
-      is_active, supported_currencies, supported_countries,
-      min_amount, max_amount, processing_time, fees_percentage,
-      fees_fixed, auto_approval, requires_kyc, config
+      name, code, type, description, logo_url, website_url, api_endpoint,
+      api_key, api_secret, webhook_url, webhook_secret, is_active,
+      supported_currencies, supported_countries, min_amount, max_amount,
+      processing_time, fees_percentage, fees_fixed, auto_approval,
+      requires_kyc, config
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
     RETURNING *
   `;
   
   const values = [
-    gatewayData.name, gatewayData.code, gatewayData.type,
-    gatewayData.description, gatewayData.logo_url, gatewayData.website_url,
-    gatewayData.api_endpoint, gatewayData.api_key, gatewayData.api_secret,
-    gatewayData.webhook_url, gatewayData.webhook_secret,
-    gatewayData.is_active !== false, gatewayData.supported_currencies,
-    gatewayData.supported_countries, gatewayData.min_amount,
-    gatewayData.max_amount, gatewayData.processing_time,
-    gatewayData.fees_percentage || 0, gatewayData.fees_fixed || 0,
-    gatewayData.auto_approval || false, gatewayData.requires_kyc || false,
+    gatewayData.name,
+    gatewayData.code,
+    gatewayData.type,
+    gatewayData.description,
+    gatewayData.logo_url,
+    gatewayData.website_url,
+    gatewayData.api_endpoint,
+    gatewayData.api_key,
+    gatewayData.api_secret,
+    gatewayData.webhook_url,
+    gatewayData.webhook_secret,
+    gatewayData.is_active !== undefined ? gatewayData.is_active : true,
+    gatewayData.supported_currencies,
+    gatewayData.supported_countries,
+    gatewayData.min_amount,
+    gatewayData.max_amount,
+    gatewayData.processing_time,
+    gatewayData.fees_percentage,
+    gatewayData.fees_fixed,
+    gatewayData.auto_approval,
+    gatewayData.requires_kyc,
     gatewayData.config
   ];
   
@@ -73,8 +85,8 @@ export const createPaymentGatewayService = async (gatewayData: CreatePaymentGate
 
 // Update payment gateway
 export const updatePaymentGatewayService = async (gatewayId: number, gatewayData: UpdatePaymentGatewayInputType) => {
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];
   let paramCount = 1;
   
   Object.entries(gatewayData).forEach(([key, value]) => {
@@ -86,7 +98,7 @@ export const updatePaymentGatewayService = async (gatewayId: number, gatewayData
   });
   
   if (fields.length === 0) {
-    throw new Error("No fields to update");
+    throw new Error("No valid fields to update");
   }
   
   values.push(gatewayId);
@@ -225,7 +237,7 @@ export const getPaymentGatewayStatsService = async (gatewayId: number, startDate
   `;
   
   const conditions = [`pg.id = $1`];
-  const values = [gatewayId];
+  const values: (string | number)[] = [gatewayId];
   let paramCount = 2;
   
   if (startDate) {
