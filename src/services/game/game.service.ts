@@ -266,13 +266,15 @@ export const getHotGamesService = async (limit: number = 10) => {
 export const toggleGameFavoriteService = async (userId: number, gameId: number) => {
   // Check if game exists
   const gameExists = await pool.query(
-    "SELECT id FROM games WHERE id = $1 AND is_active = TRUE",
+    "SELECT id, name FROM games WHERE id = $1 AND is_active = TRUE",
     [gameId]
   );
-
+  
   if (gameExists.rows.length === 0) {
     throw new ApiError("Game not found", 404);
   }
+
+  const gameName = gameExists.rows[0].name;
 
   // Check if preference exists
   const existingPreference = await pool.query(
@@ -281,20 +283,68 @@ export const toggleGameFavoriteService = async (userId: number, gameId: number) 
   );
 
   if (existingPreference.rows.length > 0) {
-    // Update existing preference
+    // Toggle existing preference
     const newFavoriteStatus = !existingPreference.rows[0].is_favorite;
+    
     await pool.query(
-      "UPDATE user_game_preferences SET is_favorite = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 AND game_id = $3",
+      `
+      UPDATE user_game_preferences 
+      SET is_favorite = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $2 AND game_id = $3
+      `,
       [newFavoriteStatus, userId, gameId]
     );
-    return { is_favorite: newFavoriteStatus };
-  } else {
-    // Create new preference
+
+    // Log favorite toggle activity
     await pool.query(
-      "INSERT INTO user_game_preferences (user_id, game_id, is_favorite) VALUES ($1, $2, TRUE)",
+      `
+      INSERT INTO user_activity_logs 
+      (user_id, action, category, description, metadata)
+      VALUES ($1, $2, 'gaming', $3, $4)
+      `,
+      [
+        userId,
+        newFavoriteStatus ? 'add_favorite' : 'remove_favorite',
+        `${newFavoriteStatus ? 'Added' : 'Removed'} ${gameName} to favorites`,
+        JSON.stringify({ game_id: gameId, game_name: gameName, is_favorite: newFavoriteStatus })
+      ]
+    );
+
+    return {
+      game_id: gameId,
+      is_favorite: newFavoriteStatus,
+      message: `${gameName} ${newFavoriteStatus ? 'added to' : 'removed from'} favorites`
+    };
+  } else {
+    // Create new preference as favorite
+    await pool.query(
+      `
+      INSERT INTO user_game_preferences 
+      (user_id, game_id, is_favorite, play_count, total_time_played) 
+      VALUES ($1, $2, TRUE, 0, 0)
+      `,
       [userId, gameId]
     );
-    return { is_favorite: true };
+
+    // Log favorite add activity
+    await pool.query(
+      `
+      INSERT INTO user_activity_logs 
+      (user_id, action, category, description, metadata)
+      VALUES ($1, 'add_favorite', 'gaming', $2, $3)
+      `,
+      [
+        userId,
+        `Added ${gameName} to favorites`,
+        JSON.stringify({ game_id: gameId, game_name: gameName, is_favorite: true })
+      ]
+    );
+
+    return {
+      game_id: gameId,
+      is_favorite: true,
+      message: `${gameName} added to favorites`
+    };
   }
 };
 
@@ -302,13 +352,15 @@ export const toggleGameFavoriteService = async (userId: number, gameId: number) 
 export const recordGamePlayService = async (userId: number, gameId: number, playTimeSeconds: number = 0) => {
   // Check if game exists
   const gameExists = await pool.query(
-    "SELECT id FROM games WHERE id = $1 AND is_active = TRUE",
+    "SELECT id, name FROM games WHERE id = $1 AND is_active = TRUE",
     [gameId]
   );
-
+  
   if (gameExists.rows.length === 0) {
     throw new ApiError("Game not found", 404);
   }
+
+  const gameName = gameExists.rows[0].name;
 
   // Update or create game preference
   const existingPreference = await pool.query(
@@ -340,6 +392,24 @@ export const recordGamePlayService = async (userId: number, gameId: number, play
       [userId, gameId, playTimeSeconds]
     );
   }
+
+  // Log game play activity
+  await pool.query(
+    `
+    INSERT INTO user_activity_logs 
+    (user_id, action, category, description, metadata)
+    VALUES ($1, 'play_game', 'gaming', $2, $3)
+    `,
+    [
+      userId, 
+      `Played ${gameName}`, 
+      JSON.stringify({ 
+        game_id: gameId, 
+        game_name: gameName, 
+        play_time_seconds: playTimeSeconds 
+      })
+    ]
+  );
 };
 
 // Place a bet on a game
@@ -602,7 +672,26 @@ export const getGamePlayInfoService = async (gameId: number, userId: number) => 
   // For now, we'll mock this
   const playUrl = `https://provider.example.com/launch?game_code=${game.game_code}&user_id=${userId}`;
 
-  // 3. Return all relevant info
+  // 3. Log game launch activity
+  await pool.query(
+    `
+    INSERT INTO user_activity_logs 
+    (user_id, action, category, description, metadata)
+    VALUES ($1, 'launch_game', 'gaming', $2, $3)
+    `,
+    [
+      userId,
+      `Launched ${game.name}`,
+      JSON.stringify({ 
+        game_id: gameId, 
+        game_name: game.name,
+        game_code: game.game_code,
+        provider: game.provider
+      })
+    ]
+  );
+
+  // 4. Return all relevant info
   return {
     play_url: playUrl,
     game: {

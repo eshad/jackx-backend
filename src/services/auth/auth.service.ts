@@ -150,6 +150,23 @@ export const registerService = async (
         );
       }
 
+      // Log user registration activity
+      await client.query(
+        `
+        INSERT INTO user_activity_logs 
+        (user_id, action, category, description, metadata)
+        VALUES ($1, 'register', 'auth', 'User registered', $2)
+        `,
+        [
+          userId,
+          JSON.stringify({ 
+            username: username, 
+            email: email,
+            registration_method: 'email'
+          })
+        ]
+      );
+
       await client.query('COMMIT');
     return SuccessMessages.REGISTER_SUCCESS;
 

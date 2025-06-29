@@ -206,6 +206,24 @@ export const updateUserStatusService = async (userId: number, statusData: Update
   `;
   
   const result = await pool.query(query, values);
+  
+  // Log admin status update activity
+  await pool.query(
+    `
+    INSERT INTO user_activity_logs 
+    (user_id, action, category, description, metadata)
+    VALUES ($1, 'admin_status_update', 'account', $2, $3)
+    `,
+    [
+      userId,
+      `Status updated to: ${statusData.status}`,
+      JSON.stringify({ 
+        new_status: statusData.status, 
+        reason: statusData.reason || 'No reason provided'
+      })
+    ]
+  );
+  
   return result.rows[0];
 };
 
@@ -254,6 +272,25 @@ export const updateUserBalanceService = async (userId: number, balanceData: Upda
     `;
     
     const balanceResult = await client.query(balanceQuery, values);
+    
+    // Log admin balance adjustment activity
+    await client.query(
+      `
+      INSERT INTO user_activity_logs 
+      (user_id, action, category, description, metadata)
+      VALUES ($1, 'admin_balance_adjustment', 'financial', $2, $3)
+      `,
+      [
+        userId,
+        `Admin ${balanceData.type} adjustment: ${balanceData.amount}`,
+        JSON.stringify({ 
+          type: balanceData.type, 
+          amount: balanceData.amount, 
+          reason: balanceData.reason,
+          transaction_id: transactionResult.rows[0].id
+        })
+      ]
+    );
     
     await client.query('COMMIT');
     

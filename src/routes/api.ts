@@ -5,7 +5,8 @@ import {
   getUserFavoriteGames, 
   getUserRecentActivity, 
   getUserTransactionHistory, 
-  getUserBettingHistory 
+  getUserBettingHistory,
+  getUserActivitySummary
 } from "../api/user/user.controller";
 import { GetHome } from "../api/home/home.controller";
 import { 
@@ -816,6 +817,106 @@ router.post("/games/bet/result", authenticate, adminAuth, validate({ body: Proce
  *                         example: Blackjack
  */
 router.get("/game/available", getAvailableGamesLegacy);
+
+/**
+ * @openapi
+ * /api/user/activity-summary:
+ *   get:
+ *     summary: Get comprehensive user activity summary
+ *     tags:
+ *       - User
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully returns comprehensive user activity summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user_id:
+ *                       type: integer
+ *                       example: 1
+ *                     username:
+ *                       type: string
+ *                       example: johndoe
+ *                     total_actions:
+ *                       type: integer
+ *                       example: 150
+ *                     active_days:
+ *                       type: integer
+ *                       example: 25
+ *                     last_activity:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-01-15T10:30:00Z"
+ *                     unique_actions:
+ *                       type: integer
+ *                       example: 12
+ *                     login_count:
+ *                       type: integer
+ *                       example: 45
+ *                     gaming_actions:
+ *                       type: integer
+ *                       example: 80
+ *                     financial_actions:
+ *                       type: integer
+ *                       example: 25
+ *                     total_bets:
+ *                       type: integer
+ *                       example: 50
+ *                     total_wagered:
+ *                       type: number
+ *                       format: float
+ *                       example: 1250.75
+ *                     total_won:
+ *                       type: number
+ *                       format: float
+ *                       example: 1350.25
+ *                     games_played:
+ *                       type: integer
+ *                       example: 15
+ *                     total_transactions:
+ *                       type: integer
+ *                       example: 30
+ *                     deposit_count:
+ *                       type: integer
+ *                       example: 20
+ *                     withdrawal_count:
+ *                       type: integer
+ *                       example: 10
+ *                     total_deposited:
+ *                       type: number
+ *                       format: float
+ *                       example: 2000.00
+ *                     total_withdrawn:
+ *                       type: number
+ *                       format: float
+ *                       example: 500.00
+ *                     total_sessions:
+ *                       type: integer
+ *                       example: 45
+ *                     current_level:
+ *                       type: string
+ *                       example: "Silver"
+ *                     current_points:
+ *                       type: integer
+ *                       example: 2500
+ *                     balance:
+ *                       type: number
+ *                       format: float
+ *                       example: 150.50
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/user/activity-summary", authenticate, getUserActivitySummary);
 
 // Add more routes:
   // router.post("/login", login)

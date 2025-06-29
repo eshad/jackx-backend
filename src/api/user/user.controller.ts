@@ -4,7 +4,8 @@ import {
   getUserFavoriteGamesService,
   getUserRecentActivityService,
   getUserTransactionHistoryService,
-  getUserBettingHistoryService
+  getUserBettingHistoryService,
+  getUserActivitySummaryService
 } from "../../services/user/user.service";
 
 export const getUserProfile = async (
@@ -108,6 +109,27 @@ export const getUserBettingHistory = async (
   } catch (err) {
     next(err);
   } 
+};
+
+// Get comprehensive user activity summary
+export const getUserActivitySummary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const summary = await getUserActivitySummaryService(userId);
+    res.status(200).json({ success: true, data: summary });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // Keep the old function for backward compatibility
