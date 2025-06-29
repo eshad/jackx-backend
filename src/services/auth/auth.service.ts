@@ -44,7 +44,7 @@ export const loginService = async (
   }
   
   // Determine which role to use
-  let selectedRole = userRoles.find(role => role.name === "player"); // Default to player
+  let selectedRole = userRoles.find(role => role.name === "Player"); // Default to player
   
   if (roleId) {
     const requestedRole = userRoles.find(role => role.id === roleId);

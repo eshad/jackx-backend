@@ -41,7 +41,7 @@ const router = Router();
 
 // Create a wrapper for the authorize middleware
 const adminAuth = (req: any, res: any, next: any) => {
-  authorize(['admin'])(req, res, next);
+  authorize(['Admin'])(req, res, next);
 };
 
 // Define all routes here (like PHP api.php)

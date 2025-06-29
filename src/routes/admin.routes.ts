@@ -39,7 +39,7 @@ const router = Router();
 
 // Create a wrapper for the authorize middleware
 const adminAuth = (req: any, res: any, next: any) => {
-  authorize(["admin"])(req, res, next);
+  authorize(["Admin"])(req, res, next);
 };
 
 // Apply authentication and admin role middleware to all routes
